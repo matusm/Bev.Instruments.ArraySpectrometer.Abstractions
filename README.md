@@ -2,7 +2,7 @@
 
 A small, well-documented interface library that defines the minimal contract required to interact with array (multichannel) spectrometer devices.
 
-This repository contains the `IArraySpectrometer` interface (`IArraySpectrometer.cs`) which describes device identification, wavelength calibration, data acquisition and integration-time control. Concrete drivers and consumers implement this contract.
+This repository contains the `IArraySpectrometer` interface (`IArraySpectrometer.cs`), describing device identification, wavelength calibration, data acquisition, saturation detection, and integration-time control. Concrete drivers and consumers implement this contract.
 
 ## Quick overview
 
@@ -15,53 +15,33 @@ The interface is intentionally minimal so implementations can remain lightweight
 ## Interface summary
 
 `IArraySpectrometer` exposes:
-- Identification properties: `InstrumentManufacturer`, `InstrumentType`, `InstrumentSerialNumber`, `InstrumentFirmwareVersion`
+- Identification: `InstrumentManufacturer`, `InstrumentType`, `InstrumentSerialNumber`, `InstrumentFirmwareVersion`
 - Calibration and range: `double[] Wavelengths`, `MinimumWavelength`, `MaximumWavelength`
+- Saturation: `double SaturationLevel` (maximum measurable intensity for the current configuration)
 - Data acquisition: `double[] GetIntensityData()`
-- Integration time control: `void SetIntegrationTime(double seconds)`, `double GetIntegrationTime()`
+- Integration time: `void SetIntegrationTime(double seconds)`, `double GetIntegrationTime()`
 
 Contract expectations (short):
 - `Wavelengths` MUST be non-null and contain >= 1 entry; values expected in ascending order (typical units: nm).
 - `GetIntensityData()` MUST return a non-null `double[]` whose length equals `Wavelengths.Length`.
+- `SaturationLevel` SHOULD bound measured intensities: values from `GetIntensityData()` are typically in `[0, SaturationLevel]`. Use it to detect clipping and tune acquisition (e.g., reduce integration time).
 - `SetIntegrationTime` uses seconds. Implementations SHOULD validate the value and throw `ArgumentOutOfRangeException` for invalid values.
 - Methods may throw `InvalidOperationException` if the instrument is not connected or in an error state.
 - Instances are not guaranteed to be thread-safe — callers should synchronize access if needed.
 
-## Consumers in this repository
+## Consumers of this interface
 
-The following projects in this solution consume and implement `IArraySpectrometer`:
+The following projects consume and implement `IArraySpectrometer`:
 - `Bev.Instruments.Thorlabs.Ctt`
 - `Bev.Instruments.Thorlabs.Css`
 
-These projects provide Thorlabs-specific implementations/drivers that adhere to the `IArraySpectrometer` contract (see their project directories for usage examples and device-specific notes).
+These provide Thorlabs-specific implementations/drivers adhering to the contract (see their project directories for device-specific notes and examples).
 
 ## Typical usage
 
-1. Obtain an instance of a concrete implementation (factory or DI container).
+1. Obtain an instance of a concrete implementation (factory or DI).
 2. Configure integration time: `SetIntegrationTime(0.1)` (seconds).
-3. Optionally call `GetIntegrationTime()` to confirm.
-4. Acquire data: `var intensities = GetIntensityData()` and map each value to `Wavelengths`.
+3. Acquire data: `var intensities = GetIntensityData()` and map each value to `Wavelengths`.
+4. Check saturation: compare intensities to `SaturationLevel` to detect clipping.
 
 Example (conceptual):
-
-## Building
-
-Open the solution in Visual Studio 2022 and build the solution:
-- File -> Open -> Project/Solution or use the command line `msbuild` for the solution file.
-- Ensure your project references target `.NET Framework 4.7.2`.
-
-If you need to adjust IDE settings, look under __Tools > Options__ and project properties for framework/target settings.
-
-## Contributing
-
-- Follow the existing coding style in the project.
-- Add unit tests for any behavior you introduce.
-- Document any deviations from the interface contract in the implementing project.
-
-## License
-
-See the repository root for licensing information.
-
-## Contact / Maintainer
-
-For questions about the interface or implementations, check the concrete driver projects (`Bev.Instruments.Thorlabs.Ctt`, `Bev.Instruments.Thorlabs.Css`) and open an issue or pull request on the repository.
