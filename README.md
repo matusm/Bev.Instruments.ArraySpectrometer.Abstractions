@@ -18,6 +18,7 @@ The interface is intentionally minimal so implementations can remain lightweight
 - Identification: `InstrumentManufacturer`, `InstrumentType`, `InstrumentSerialNumber`, `InstrumentFirmwareVersion`
 - Calibration and range: `double[] Wavelengths`, `MinimumWavelength`, `MaximumWavelength`
 - Saturation: `double SaturationLevel` (maximum measurable intensity for the current configuration)
+- Integration time limits: `double MinimumIntegrationTime`, `double MaximumIntegrationTime` (valid bounds for integration time in seconds)
 - Data acquisition: `double[] GetIntensityData()`
 - Integration time: `void SetIntegrationTime(double seconds)`, `double GetIntegrationTime()`
 
@@ -25,6 +26,7 @@ Contract expectations (short):
 - `Wavelengths` MUST be non-null and contain >= 1 entry; values expected in ascending order (typical units: nm).
 - `GetIntensityData()` MUST return a non-null `double[]` whose length equals `Wavelengths.Length`.
 - `SaturationLevel` SHOULD bound measured intensities: values from `GetIntensityData()` are typically in `[0, SaturationLevel]`. Use it to detect clipping and tune acquisition (e.g., reduce integration time).
+- `MinimumIntegrationTime` and `MaximumIntegrationTime` define valid bounds for `SetIntegrationTime(...)` in seconds. Implementations SHOULD enforce these bounds and reflect the actual value via `GetIntegrationTime()`.
 - `SetIntegrationTime` uses seconds. Implementations SHOULD validate the value and throw `ArgumentOutOfRangeException` for invalid values.
 - Methods may throw `InvalidOperationException` if the instrument is not connected or in an error state.
 - Instances are not guaranteed to be thread-safe — callers should synchronize access if needed.
@@ -40,7 +42,7 @@ These provide Thorlabs-specific implementations/drivers adhering to the contract
 ## Typical usage
 
 1. Obtain an instance of a concrete implementation (factory or DI).
-2. Configure integration time: `SetIntegrationTime(0.1)` (seconds).
+2. Read `MinimumIntegrationTime` and `MaximumIntegrationTime`, then configure integration time within bounds: `SetIntegrationTime(0.1)` (seconds).
 3. Acquire data: `var intensities = GetIntensityData()` and map each value to `Wavelengths`.
 4. Check saturation: compare intensities to `SaturationLevel` to detect clipping.
 
