@@ -44,6 +44,8 @@ namespace Bev.Instruments.ArraySpectrometer.Abstractions
         double MinimumWavelength { get; }
         double MaximumWavelength { get; }
         double SaturationLevel { get; }
+        double MinimumIntegrationTime { get; }
+        double MaximumIntegrationTime { get; }
 
         double[] GetIntensityData();
         void SetIntegrationTime(double seconds);
